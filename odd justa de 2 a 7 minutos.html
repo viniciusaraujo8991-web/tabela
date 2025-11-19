@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Simulador de Odd Justa - Under Limite</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    input, select { margin: 5px; padding: 5px; }
+    button { padding: 5px 10px; margin: 5px; }
+    .resultado { margin-top: 20px; padding: 10px; border: 1px solid #ccc; }
+  </style>
+</head>
+<body>
+  <h2>Simulador de Odd Justa - Under Limite</h2>
+
+  <label for="minuto">⏱️ Minuto do jogo:</label>
+  <select id="minuto">
+    <option value="">Selecione</option>
+    <script>
+      for(let i = 1; i <= 90; i++) {
+        document.write(`<option value="${i}">${i}</option>`);
+      }
+    </script>
+  </select><br>
+
+  <label for="oddAtual">📉 Odd atual no mercado da Betfair:</label>
+  <input list="odds" id="oddAtual" step="0.01">
+  <datalist id="odds">
+    <script>
+      for (let i = 1.01; i <= 15.00; i += 0.01) {
+        document.write(`<option value="${i.toFixed(2)}">`);
+      }
+    </script>
+  </datalist><br>
+
+  <label for="xg">📊 xG estimado até o fim do jogo:</label>
+  <input type="number" id="xg" step="0.01"><br>
+
+  <button onclick="calcularOddJusta()">Calcular Odd Justa</button>
+
+  <div class="resultado" id="resultado"></div>
+
+  <h3>⏱️ Cronômetro de permanência no mercado</h3>
+  <div id="cronometro">0s</div>
+  <button onclick="iniciarCronometro()">Iniciar</button>
+  <button onclick="pausarCronometro()">Pausar</button>
+  <button onclick="resetarCronometro()">Resetar</button>
+
+  <script>
+    let intervalo;
+    let segundos = 0;
+    function iniciarCronometro() {
+      if (!intervalo) {
+        intervalo = setInterval(() => {
+          segundos++;
+          document.getElementById("cronometro").innerText = segundos + "s";
+        }, 1000);
+      }
+    }
+    function pausarCronometro() {
+      clearInterval(intervalo);
+      intervalo = null;
+    }
+    function resetarCronometro() {
+      clearInterval(intervalo);
+      intervalo = null;
+      segundos = 0;
+      document.getElementById("cronometro").innerText = "0s";
+    }
+
+    function calcularOddJusta() {
+      const minuto = parseInt(document.getElementById("minuto").value);
+      const oddAtual = parseFloat(document.getElementById("oddAtual").value);
+      const xg = parseFloat(document.getElementById("xg").value);
+
+      if (isNaN(minuto) || isNaN(oddAtual) || isNaN(xg)) {
+        document.getElementById("resultado").innerText = "Preencha todos os campos corretamente.";
+        return;
+      }
+
+      const minutosRestantes = 90 - minuto;
+      const probabilidadeNaoSairGol = Math.exp(-xg);
+      const oddJusta = 1 / probabilidadeNaoSairGol;
+      const valorEsperado = (oddAtual / oddJusta - 1) * 100;
+
+      let evMinutos = "<ul>";
+      [2, 3, 5, 6, 7].forEach(m => {
+        const fracaoTempo = m / minutosRestantes;
+        const xgParcial = xg * fracaoTempo;
+        const probNaoSair = Math.exp(-xgParcial);
+        const oddParcial = 1 / probNaoSair;
+        const evParcial = (oddAtual / oddParcial - 1) * 100;
+        evMinutos += `<li><strong>${m} min:</strong> EV ${evParcial.toFixed(2)}% → ${evParcial > 0 ? '✅ EV+' : '❌ EV-'}</li>`;
+      });
+      evMinutos += "</ul>";
+
+      document.getElementById("resultado").innerHTML = `
+        <strong>Minutos restantes:</strong> ${minutosRestantes}<br>
+        <strong>Probabilidade de não sair gol:</strong> ${(probabilidadeNaoSairGol * 100).toFixed(2)}%<br>
+        <strong>Odd justa:</strong> ${oddJusta.toFixed(2)}<br>
+        <strong>Valor Esperado (EV):</strong> ${valorEsperado.toFixed(2)}% → ${valorEsperado > 0 ? '✅ EV+' : '❌ EV-'}<br><br>
+        <strong>📈 Simulação de EV para permanecer no mercado:</strong><br>
+        ${evMinutos}
+      `;
+    }
+  </script>
+</body>
+</html>
